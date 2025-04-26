@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <title>ASSET TRACKER - ทศพล พงษ์ชวลิต</title>
+  <style>
+    body { font-family: sans-serif; padding: 20px; background-color: #f5f5f5; }
+    h1, h2, h3 { color: #333; }
+    label, input, select, button { display: block; margin: 10px 0; }
+    .asset-box { background: #fff; padding: 20px; margin-bottom: 20px; border-radius: 8px; box-shadow: 0 2px 6px rgba(0,0,0,0.1); }
+    button { padding: 10px 15px; background-color: #ff6f00; border: none; color: #fff; border-radius: 4px; cursor: pointer; }
+    button:hover { background-color: #e65c00; }
+    table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+    th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+    th { background-color: #eee; }
+    select { max-width: 300px; }
+    .flex-row { display: flex; flex-wrap: wrap; gap: 20px; }
+    .flex-row > div { flex: 1; min-width: 300px; }
+  </style>
+</head>
+<body>
+
+  <h1>ASSET TRACKER - ทศพล พงษ์ชวลิต</h1>
+
+  <div class="asset-box">
+    <h2>ข้อมูลผู้ใช้</h2>
+    <p><strong>ชื่อ:</strong> ทศพล พงษ์ชวลิต</p>
+    <p><strong>เลขบัตรประชาชน:</strong> 1200100233992</p>
+    <p><strong>เบอร์โทร:</strong> 0639067292</p>
+    <p><strong>Account:</strong> aofb0.49@gmail.com</p>
+    <p><strong>Asset ID:</strong> KASITHBK1588740753</p>
+    <p><strong id="totalAssets">รวมมูลค่าสินทรัพย์: -- THB</strong></p>
+    <ul id="accountList"></ul>
+  </div>
+
+  <div class="asset-box">
+    <h2>บัญชีหลักที่เลือกไว้</h2>
+    <p id="mainAccountDisplay">ยังไม่ได้เลือกบัญชี</p>
+    <label><strong>เลือกบัญชีต้นทาง:</strong></label>
+    <select id="sourceAccount"></select>
+    <button onclick="setMainAccount()">ตั้งบัญชีต้นทางหลัก</button>
+  </div>
+
+  <div class="asset-box">
+    <h2>ระบบธุรกรรม</h2>
+    <div class="flex-row">
+      <div>
+        <label><strong>จำนวนเงินที่ต้องการโอน (THB):</strong></label>
+        <input type="number" id="amountInput">
+
+        <label><strong>เลขที่บัญชีปลายทาง:</strong></label>
+        <input type="text" id="accountInput" maxlength="20">
+
+        <label><strong>เลือกธนาคารผู้รับเงิน:</strong></label>
+        <select id="bankSelect">
+          <option value="">-- กรุณาเลือกธนาคาร --</option>
+          <option value="ธนาคารกรุงไทย">ธนาคารกรุงไทย</option>
+          <option value="ธนาคารกสิกรไทย">ธนาคารกสิกรไทย</option>
+          <option value="ธนาคารกรุงเทพ">ธนาคารกรุงเทพ</option>
+        </select>
+
+        <button onclick="transferMoney()">โอนเงิน</button>
+        <button onclick="payBill()">จ่ายเงิน</button>
+      </div>
+
+      <div>
+        <label><strong>เบอร์โทร (สำหรับเติมเงิน):</strong></label>
+        <input type="text" id="topupPhone" maxlength="10">
+
+        <label><strong>จำนวนเงินที่ต้องการเติม (THB):</strong></label>
+        <input type="number" id="topupAmount">
+
+        <button onclick="topUp()">เติมเงิน</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="asset-box">
+    <h2>ประวัติธุรกรรม</h2>
+    <table>
+      <thead>
+        <tr><th>ประเภท</th><th>รายละเอียด</th><th>จำนวนเงิน</th><th>เวลา</th></tr>
+      </thead>
+      <tbody id="transactionHistory"></tbody>
+    </table>
+  </div>
+
+  <div class="asset-box">
+    <h3>เวลา:</h3>
+    <p id="time">กำลังโหลด...</p>
+  </div>
+
+  <script>
+    const STORAGE_KEYS = {
+      accounts: "assetTracker.accounts",
+      history: "assetTracker.transactionHistory",
+      mainAccount: "assetTracker.mainAccount"
+    };
+
+    let accounts = JSON.parse(localStorage.getItem(STORAGE_KEYS.accounts)) || {
+      "KASITHBK1588740753": 135552544.81,
+      "BKKBTHBK9804159334": 62000000.00,
+      "BKKBTHBK39": 41730000.10,
+      "บัญชีส่วนบุคคล": 37000821.00,
+      "KRTHTHBKX4280": 18571586.01,
+      "KKPBTHBKX2862": 10001050.52,
+      "KIFITHBIKIFITHB1": 6800000.52,
+      "TMNINAPP": 2991000.10
+    };
+
+    let transactionHistory = JSON.parse(localStorage.getItem(STORAGE_KEYS.history)) || [];
+
+    function saveState() {
+      localStorage.setItem(STORAGE_KEYS.accounts, JSON.stringify(accounts));
+      localStorage.setItem(STORAGE_KEYS.history, JSON.stringify(transactionHistory));
+    }
+
+    function updateAssetsDisplay() {
+      let total = 0;
+      const list = document.getElementById("accountList");
+      const sourceSelector = document.getElementById("sourceAccount");
+      list.innerHTML = "";
+      sourceSelector.innerHTML = "";
+
+      for (let [name, balance] of Object.entries(accounts)) {
+        total += balance;
+        list.innerHTML += `<li>${name} – ${balance.toLocaleString('th-TH', {minimumFractionDigits: 2})} THB</li>`;
+        sourceSelector.innerHTML += `<option value="${name}">${name} (${balance.toLocaleString('th-TH', {minimumFractionDigits: 2})} THB)</option>`;
+      }
+
+      document.getElementById("totalAssets").innerText = `รวมมูลค่าสินทรัพย์: ${total.toLocaleString('th-TH', {minimumFractionDigits: 2})} THB`;
+    }
+
+    function renderTransactionHistory() {
+      const tbody = document.getElementById("transactionHistory");
+      tbody.innerHTML = "";
+      for (let tx 
