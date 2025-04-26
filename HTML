@@ -134,4 +134,100 @@
     function renderTransactionHistory() {
       const tbody = document.getElementById("transactionHistory");
       tbody.innerHTML = "";
-      for (let tx 
+      for (let tx of transactionHistory) {
+        const row = `<tr>
+          <td>${tx.type}</td>
+          <td>${tx.details}</td>
+          <td>${tx.amount.toLocaleString('th-TH', {minimumFractionDigits: 2})} THB</td>
+          <td>${new Date(tx.time).toLocaleString('th-TH')}</td>
+        </tr>`;
+        tbody.innerHTML += row;
+      }
+    }
+
+    function setMainAccount() {
+      const selectedAccount = document.getElementById("sourceAccount").value;
+      if (selectedAccount) {
+        localStorage.setItem(STORAGE_KEYS.mainAccount, selectedAccount);
+        document.getElementById("mainAccountDisplay").innerText = `บัญชีหลัก: ${selectedAccount}`;
+      } else {
+        alert("กรุณาเลือกบัญชีต้นทาง");
+      }
+    }
+
+    function transferMoney() {
+      const amount = parseFloat(document.getElementById("amountInput").value);
+      const accountInput = document.getElementById("accountInput").value;
+      const bank = document.getElementById("bankSelect").value;
+      const sourceAccount = localStorage.getItem(STORAGE_KEYS.mainAccount);
+
+      if (!sourceAccount) {
+        alert("กรุณาเลือกบัญชีต้นทางหลักก่อน");
+        return;
+      }
+      if (!amount || amount <= 0 || !accountInput || !bank) {
+        alert("กรุณากรอกข้อมูลให้ครบถ้วน");
+        return;
+      }
+      if (accounts[sourceAccount] < amount) {
+        alert("ยอดเงินในบัญชีไม่เพียงพอ");
+        return;
+      }
+
+      accounts[sourceAccount] -= amount;
+      transactionHistory.push({
+        type: "โอนเงิน",
+        details: `ไปยัง ${accountInput} (${bank})`,
+        amount: amount,
+        time: Date.now()
+      });
+
+      saveState();
+      updateAssetsDisplay();
+      renderTransactionHistory();
+      alert("ทำรายการสำเร็จ");
+    }
+
+    function topUp() {
+      const phone = document.getElementById("topupPhone").value;
+      const amount = parseFloat(document.getElementById("topupAmount").value);
+      const sourceAccount = localStorage.getItem(STORAGE_KEYS.mainAccount);
+
+      if (!sourceAccount) {
+        alert("กรุณาเลือกบัญชีต้นทางหลักก่อน");
+        return;
+      }
+      if (!phone || !amount || amount <= 0) {
+        alert("กรุณากรอกข้อมูลให้ครบถ้วน");
+        return;
+      }
+      if (accounts[sourceAccount] < amount) {
+        alert("ยอดเงินในบัญชีไม่เพียงพอ");
+        return;
+      }
+
+      accounts[sourceAccount] -= amount;
+      transactionHistory.push({
+        type: "เติมเงิน",
+        details: `เบอร์โทร ${phone}`,
+        amount: amount,
+        time: Date.now()
+      });
+
+      saveState();
+      updateAssetsDisplay();
+      renderTransactionHistory();
+      alert("เติมเงินสำเร็จ");
+    }
+
+    function updateTime() {
+      const timeElement = document.getElementById("time");
+      timeElement.innerText = new Date().toLocaleString('th-TH');
+    }
+
+    updateAssetsDisplay();
+    renderTransactionHistory();
+    setInterval(updateTime, 1000);
+  </script>
+</body>
+</html>
